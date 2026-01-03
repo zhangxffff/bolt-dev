@@ -1,7 +1,16 @@
 services:
+  init-perms:
+    image: alpine:3.20
+    user: "0:0"
+    volumes:
+      - ccache:/ccache
+      - conan:/conan
+      - vscode:/vscode
+    command: ["sh", "-lc", "chown -R ${UID}:${GID} /ccache /conan /vscode"]
   dev:
-    container_name: bolt-oss
-    image: bolt-oss
+    user: "${UID}:${GID}"
+    container_name: bolt-dev
+    image: bolt-dev
 
     environment:
       HTTP_PROXY: ${HTTP_PROXY}
@@ -12,12 +21,13 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        USERNAME: ${DEV_USERNAME:-user}
-        WORKSPACE: ${DEV_WORKSPACE:-Workspace}
+        BASE_IMAGE: ${BASE_IMAGE}
+        UID: ${UID}
+        GID: ${GID}
+        USERNAME: ${DEV_USERNAME}
         HTTP_PROXY: ${HTTP_PROXY}
         HTTPS_PROXY: ${HTTPS_PROXY}
         NO_PROXY: ${NO_PROXY}
-        BASE_IMAGE: ${BASE_IMAGE}
 
     working_dir: /home/${DEV_USERNAME}/${DEV_WORKSPACE}
 
@@ -25,6 +35,7 @@ services:
       - ~/${DEV_DIRECTORY}:/home/${DEV_USERNAME}/${DEV_WORKSPACE}
       - ccache:/home/${DEV_USERNAME}/.ccache
       - conan:/home/${DEV_USERNAME}/.conan2
+      - vscode:/home/${DEV_USERNAME}/.vscode-server
 
     tty: true
     stdin_open: true
@@ -32,3 +43,4 @@ services:
 volumes:
   ccache:
   conan:
+  vscode:
