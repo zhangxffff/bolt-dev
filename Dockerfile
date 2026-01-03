@@ -33,13 +33,10 @@ RUN apt-get update && \
     ninja-build \
     tmux
 
-RUN GCC_VERSION=12.5.0 &&  \
-    wget https://mirrors.aliyun.com/gnu/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.gz -P /tmp && \
-    tar -xzvf /tmp/gcc-${GCC_VERSION}.tar.gz -C /tmp && cd $(realpath /tmp/gcc-${GCC_VERSION}) && \
-    ./contrib/download_prerequisites && \
-    ./configure --prefix=/usr/ --enable-checking=release --enable-languages=c,c++ --disable-multilib && \
-    make -j $(nproc) && make install-strip && \
-    ldconfig && rm -rf  /tmp/gcc*
+RUN apt-get install -y gcc-12 g++-12 && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100 && \
+    test "$(gcc -dumpversion | cut -d. -f1)" = "12"
 
 # Install GitHub CLI
 RUN (type -p wget >/dev/null || (sudo apt update && sudo apt install wget -y)) \
@@ -51,11 +48,6 @@ RUN (type -p wget >/dev/null || (sudo apt update && sudo apt install wget -y)) \
 	&& echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
 	&& sudo apt update \
 	&& sudo apt install gh -y
-
-RUN locale-gen en_US.UTF-8 zh_CN.UTF-8 && \
-    update-locale LANG=en_US.UTF-8
-ENV LANG=en_US.UTF-8 \
-    LC_ALL=en_US.UTF-8
 
 RUN groupadd --gid ${GID} ${USERNAME} && \
     useradd --uid ${UID} --gid ${GID} -m -s /bin/bash ${USERNAME} && \
