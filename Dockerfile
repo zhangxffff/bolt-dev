@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ubuntu:22.04
+ARG BASE_IMAGE=debian:trixie
 FROM ${BASE_IMAGE}
 
 ARG USERNAME
@@ -32,6 +32,14 @@ RUN apt-get update && \
     ripgrep \
     ninja-build \
     tmux
+
+RUN GCC_VERSION=12.5.0 &&  \
+    wget https://mirrors.aliyun.com/gnu/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.gz -P /tmp && \
+    tar -xzvf /tmp/gcc-${GCC_VERSION}.tar.gz -C /tmp && cd $(realpath /tmp/gcc-${GCC_VERSION}) && \
+    ./contrib/download_prerequisites && \
+    ./configure --prefix=/usr/ --enable-checking=release --enable-languages=c,c++ --disable-multilib && \
+    make -j $(nproc) && make install-strip && \
+    ldconfig && rm -rf  /tmp/gcc*
 
 # Install GitHub CLI
 RUN (type -p wget >/dev/null || (sudo apt update && sudo apt install wget -y)) \
