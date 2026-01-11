@@ -32,7 +32,8 @@ RUN apt-get update && \
     ripgrep \
     ninja-build \
     tmux \
-    unzip
+    unzip \
+    tzdata
 
 RUN apt-get update && apt-get install -y --no-install-recommends locales \
   && locale-gen en_US.UTF-8
@@ -93,5 +94,7 @@ RUN bash -lc "conan profile detect"
 RUN bash -lc "nvm install 24 && npm i -g @openai/codex && npm install -g @google/gemini-cli && npm i -g opencode-ai"
 
 RUN bash -lc "curl -fsSL https://bun.com/install | bash"
+
+COPY vscode-tmux /home/${USERNAME}/.local/bin/
 
 CMD ["/bin/bash"]
