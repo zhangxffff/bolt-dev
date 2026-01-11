@@ -31,7 +31,13 @@ RUN apt-get update && \
     ccache \
     ripgrep \
     ninja-build \
-    tmux
+    tmux \
+    unzip
+
+RUN apt-get update && apt-get install -y --no-install-recommends locales \
+  && locale-gen en_US.UTF-8
+
+ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
 RUN apt-get install -y gcc-12 g++-12 && \
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 && \
@@ -84,6 +90,8 @@ EOF
 
 RUN bash -lc "conan profile detect"
 
-RUN bash -lc "nvm install 24 && npm i -g @openai/codex && npm install -g @google/gemini-cli"
+RUN bash -lc "nvm install 24 && npm i -g @openai/codex && npm install -g @google/gemini-cli && npm i -g opencode-ai"
+
+RUN bash -lc "curl -fsSL https://bun.com/install | bash"
 
 CMD ["/bin/bash"]

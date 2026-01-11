@@ -31,6 +31,9 @@ services:
 
     working_dir: /home/${DEV_USERNAME}/${DEV_WORKSPACE}
 
+    ports:
+      - "${HTTP_PORT}:${HTTP_PORT}"
+
     volumes:
       - ~/${DEV_DIRECTORY}:/home/${DEV_USERNAME}/${DEV_WORKSPACE}
       - ccache:/home/${DEV_USERNAME}/.ccache
