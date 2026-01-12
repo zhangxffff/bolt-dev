@@ -35,10 +35,7 @@ RUN apt-get update && \
     unzip \
     tzdata
 
-RUN apt-get update && apt-get install -y --no-install-recommends locales \
-  && locale-gen en_US.UTF-8
-
-ENV LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 
 RUN apt-get install -y gcc-12 g++-12 && \
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 && \
