@@ -1,0 +1,29 @@
+### this piece of code would append to the bash_profile file
+
+if [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion;
+fi
+
+export LANG=C.UTF-8
+export LC_ALL=C.UTF-8
+export LC_CTYPE=C.UTF-8
+
+export PS1='\[\e[1;32m\][\u@\h \W]\$\[\e[0m\] '
+. ~/.venv/bin/activate
+. ~/.nvm/nvm.sh
+export CI_NUM_THREADS=$(nproc)
+
+if [ "${TERM_PROGRAM}" = "Zed" ]; then
+    # session name
+    SESSION="$(basename "$PWD")"
+    SESSION="${SESSION//[^a-zA-Z0-9_.-]/_}"
+
+    # already in tmux → switch session
+    if [[ -n "${TMUX:-}" ]]; then
+    exec tmux switch-client -t "$SESSION" \
+        2>/dev/null || exec tmux new-session -A -s "$SESSION"
+    fi
+
+    # not in tmux → attach / new
+    exec tmux new-session -A -s "$SESSION"
+fi
