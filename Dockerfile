@@ -33,9 +33,8 @@ RUN apt-get update && \
     ninja-build \
     tmux \
     unzip \
-    tzdata
-
-ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+    tzdata \
+    openssh-server
 
 RUN apt-get install -y gcc-12 g++-12 && \
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 && \
@@ -44,14 +43,14 @@ RUN apt-get install -y gcc-12 g++-12 && \
 
 # Install GitHub CLI
 RUN (type -p wget >/dev/null || (sudo apt update && sudo apt install wget -y)) \
-	&& sudo mkdir -p -m 755 /etc/apt/keyrings \
-	&& out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-	&& cat $out | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
-	&& sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
-	&& sudo mkdir -p -m 755 /etc/apt/sources.list.d \
-	&& echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-	&& sudo apt update \
-	&& sudo apt install gh -y
+    && sudo mkdir -p -m 755 /etc/apt/keyrings \
+    && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+    && cat $out | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+    && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && sudo mkdir -p -m 755 /etc/apt/sources.list.d \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+    && sudo apt update \
+    && sudo apt install gh -y
 
 RUN groupadd --gid ${GID} ${USERNAME} && \
     useradd --uid ${UID} --gid ${GID} -m -s /bin/bash ${USERNAME} && \
@@ -63,10 +62,15 @@ RUN usermod -aG sudo ${USERNAME}
 RUN mv /usr/bin/ld /usr/bin/ld.bak && \
     ln -s /usr/bin/mold /usr/bin/ld
 
+RUN ssh-keygen -A
+
 USER ${USERNAME}
 
 # set default user
 ENV USER=${USERNAME}
+
+# Setup SSH directory (authorized_keys will be mounted from host at runtime)
+RUN mkdir -p /home/${USERNAME}/.ssh && chmod 700 /home/${USERNAME}/.ssh
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     . /home/${USERNAME}/.local/bin/env && \
@@ -76,15 +80,9 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | b
 
 WORKDIR /home/${USERNAME}
 
-RUN cat <<'EOF' > /home/${USERNAME}/.bashrc
-if [ -f /etc/bash_completion ]; then
-    . /etc/bash_completion;
-fi
-export PS1="[\u@container \W]\\$ "
-. ~/.venv/bin/activate
-. ~/.nvm/nvm.sh
-export CI_NUM_THREADS=$(nproc)
-EOF
+COPY config/bash_profile /tmp/
+
+RUN cat /tmp/bash_profile >> /home/${USERNAME}/.bash_profile
 
 RUN bash -lc "conan profile detect"
 
@@ -92,6 +90,13 @@ RUN bash -lc "nvm install 24 && npm i -g @openai/codex && npm install -g @google
 
 RUN bash -lc "curl -fsSL https://bun.com/install | bash"
 
-COPY vscode-tmux /home/${USERNAME}/.local/bin/
+COPY --chown=${USERNAME}:${USERNAME} config/auth/opencode.json /home/${USERNAME}/.local/share/opencode/auth.json
 
-CMD ["/bin/bash"]
+COPY --chown=${USERNAME}:${USERNAME} config/auth/opencode_antigravity.json /home/${USERNAME}/.config/opencode/antigravity-accounts.json
+
+# Switch back to root to run sshd (requires root for port 22 and host keys)
+USER root
+
+EXPOSE 22
+
+CMD ["/usr/sbin/sshd", "-D", "-e"]
