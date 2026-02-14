@@ -34,7 +34,9 @@ RUN apt-get update && \
     tmux \
     unzip \
     tzdata \
-    openssh-server
+    openssh-server \
+    fish \
+    openjdk-21-jdk
 
 RUN apt-get install -y gcc-12 g++-12 && \
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 && \
@@ -64,6 +66,8 @@ RUN mv /usr/bin/ld /usr/bin/ld.bak && \
 
 RUN ssh-keygen -A
 
+RUN chsh -s /usr/bin/fish ${USERNAME}
+
 USER ${USERNAME}
 
 # set default user
@@ -76,23 +80,21 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     . /home/${USERNAME}/.local/bin/env && \
     cd /home/${USERNAME} && uv venv && uv pip install pip conan pydot
 
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+RUN curl -fsSL https://fnm.vercel.app/install | bash
 
 WORKDIR /home/${USERNAME}
 
-COPY config/bash_profile /tmp/
+COPY config/fish.config /tmp/
 
-RUN cat /tmp/bash_profile >> /home/${USERNAME}/.bash_profile
+RUN cat /tmp/fish.config >> /home/${USERNAME}/.config/fish/config.fish
 
-RUN bash -lc "conan profile detect"
+RUN fish -lc "conan profile detect"
 
-RUN bash -lc "nvm install 24 && npm i -g @openai/codex && npm install -g @google/gemini-cli && npm i -g opencode-ai"
+RUN fish -lc "fnm install 25 && npm i -g @openai/codex && npm i -g opencode-ai"
 
-RUN bash -lc "curl -fsSL https://bun.com/install | bash"
+RUN fish -lc "curl -fsSL https://claude.ai/install.sh | bash"
 
-COPY --chown=${USERNAME}:${USERNAME} config/auth/opencode.json /home/${USERNAME}/.local/share/opencode/auth.json
-
-COPY --chown=${USERNAME}:${USERNAME} config/auth/opencode_antigravity.json /home/${USERNAME}/.config/opencode/antigravity-accounts.json
+RUN fish -lc "curl -fsSL https://bun.com/install | bash"
 
 # Switch back to root to run sshd (requires root for port 22 and host keys)
 USER root

@@ -7,13 +7,15 @@ services:
             - conan:/conan
             - vscode:/vscode
             - zed:/zed
+            - opencode:/opencode
         command:
-            ["sh", "-lc", "chown -R ${UID}:${GID} /ccache /conan /vscode /zed"]
+            ["sh", "-lc", "chown -R ${UID}:${GID} /ccache /conan /vscode /zed /opencode"]
     dev:
         # Note: Running as root to allow sshd to bind port 22 and read host keys
         # User switching happens after SSH login
         container_name: bolt-dev
         image: bolt-dev
+        privileged: true
 
         environment:
             HTTP_PROXY: ${HTTP_PROXY}
@@ -45,6 +47,7 @@ services:
             - conan:/home/${DEV_USERNAME}/.conan2
             - vscode:/home/${DEV_USERNAME}/.vscode-server
             - zed:/home/${DEV_USERNAME}/.zed_server
+            - opencode:/home/${DEV_USERNAME}/.local/share/opencode
 
         tty: true
         stdin_open: true
@@ -54,3 +57,4 @@ volumes:
     conan:
     vscode:
     zed:
+    opencode:
