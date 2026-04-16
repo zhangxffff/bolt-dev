@@ -21,6 +21,8 @@ services:
             HTTP_PROXY: ${HTTP_PROXY}
             HTTPS_PROXY: ${HTTPS_PROXY}
             NO_PROXY: ${NO_PROXY}
+            REVERSE_PROXY_HOST: ${REVERSE_PROXY_HOST}
+            REVERSE_PROXY_PORT: ${REVERSE_PROXY_PORT}
 
         build:
             context: .
@@ -43,6 +45,8 @@ services:
         volumes:
             - ~/${DEV_DIRECTORY}:/home/${DEV_USERNAME}/${DEV_WORKSPACE}
             - ~/.ssh/authorized_keys:/home/${DEV_USERNAME}/.ssh/authorized_keys:ro
+            - ~/.ssh/id_ed25519:/root/.ssh/id_ed25519:ro
+            - ~/.ssh/known_hosts:/root/.ssh/known_hosts
             - ccache:/home/${DEV_USERNAME}/.ccache
             - conan:/home/${DEV_USERNAME}/.conan2
             - vscode:/home/${DEV_USERNAME}/.vscode-server

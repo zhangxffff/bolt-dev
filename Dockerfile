@@ -35,6 +35,7 @@ RUN apt-get update && \
     unzip \
     tzdata \
     openssh-server \
+    autossh \
     fish \
     openjdk-21-jdk
 
@@ -99,6 +100,9 @@ RUN fish -lc "curl -fsSL https://bun.com/install | bash"
 # Switch back to root to run sshd (requires root for port 22 and host keys)
 USER root
 
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 EXPOSE 22
 
-CMD ["/usr/sbin/sshd", "-D", "-e"]
+CMD ["/entrypoint.sh"]
