@@ -3,13 +3,9 @@ services:
         image: alpine:3.20
         user: "0:0"
         volumes:
-            - ccache:/ccache
-            - conan:/conan
-            - vscode:/vscode
-            - zed:/zed
-            - opencode:/opencode
+            - home:/home
         command:
-            ["sh", "-lc", "chown -R ${UID}:${GID} /ccache /conan /vscode /zed /opencode"]
+            ["sh", "-lc", "chown -R ${UID}:${GID} /home"]
     dev:
         # Note: Running as root to allow sshd to bind port 22 and read host keys
         # User switching happens after SSH login
@@ -32,33 +28,23 @@ services:
                 UID: ${UID}
                 GID: ${GID}
                 USERNAME: ${DEV_USERNAME}
+                PASSWORD: ${DEV_PASSWORD}
                 HTTP_PROXY: ${HTTP_PROXY}
                 HTTPS_PROXY: ${HTTPS_PROXY}
                 NO_PROXY: ${NO_PROXY}
-
-        working_dir: /home/${DEV_USERNAME}/${DEV_WORKSPACE}
 
         ports:
             - "${HTTP_PORT}:${HTTP_PORT}"
             - "${SSH_PORT}:22"
 
         volumes:
-            - ~/${DEV_DIRECTORY}:/home/${DEV_USERNAME}/${DEV_WORKSPACE}
+            - home:/home/${DEV_USERNAME}
             - ~/.ssh/authorized_keys:/home/${DEV_USERNAME}/.ssh/authorized_keys:ro
             - ~/.ssh/id_ed25519:/root/.ssh/id_ed25519:ro
             - ~/.ssh/known_hosts:/root/.ssh/known_hosts
-            - ccache:/home/${DEV_USERNAME}/.ccache
-            - conan:/home/${DEV_USERNAME}/.conan2
-            - vscode:/home/${DEV_USERNAME}/.vscode-server
-            - zed:/home/${DEV_USERNAME}/.zed_server
-            - opencode:/home/${DEV_USERNAME}/.local/share/opencode
 
         tty: true
         stdin_open: true
 
 volumes:
-    ccache:
-    conan:
-    vscode:
-    zed:
-    opencode:
+    home:

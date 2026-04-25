@@ -4,6 +4,7 @@ FROM ${BASE_IMAGE}
 ARG USERNAME
 ARG UID
 ARG GID
+ARG PASSWORD
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
 ARG NO_PROXY
@@ -57,6 +58,7 @@ RUN (type -p wget >/dev/null || (sudo apt update && sudo apt install wget -y)) \
 
 RUN groupadd --gid ${GID} ${USERNAME} && \
     useradd --uid ${UID} --gid ${GID} -m -s /bin/bash ${USERNAME} && \
+    echo "${USERNAME}:${PASSWORD}" | chpasswd && \
     echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} && \
     chmod 0440 /etc/sudoers.d/${USERNAME}
 
@@ -65,40 +67,14 @@ RUN usermod -aG sudo ${USERNAME}
 RUN mv /usr/bin/ld /usr/bin/ld.bak && \
     ln -s /usr/bin/mold /usr/bin/ld
 
-RUN ssh-keygen -A
-
 RUN chsh -s /usr/bin/fish ${USERNAME}
-
-USER ${USERNAME}
 
 # set default user
 ENV USER=${USERNAME}
 
-# Setup SSH directory (authorized_keys will be mounted from host at runtime)
-RUN mkdir -p /home/${USERNAME}/.ssh && chmod 700 /home/${USERNAME}/.ssh
-
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    . /home/${USERNAME}/.local/bin/env && \
-    cd /home/${USERNAME} && uv venv && uv pip install pip conan pydot
-
-RUN curl -fsSL https://fnm.vercel.app/install | bash
-
 WORKDIR /home/${USERNAME}
 
 COPY config/fish.config /tmp/
-
-RUN cat /tmp/fish.config >> /home/${USERNAME}/.config/fish/config.fish
-
-RUN fish -lc "conan profile detect"
-
-RUN fish -lc "fnm install 25 && npm i -g @openai/codex && npm i -g opencode-ai"
-
-RUN fish -lc "curl -fsSL https://claude.ai/install.sh | bash"
-
-RUN fish -lc "curl -fsSL https://bun.com/install | bash"
-
-# Switch back to root to run sshd (requires root for port 22 and host keys)
-USER root
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
