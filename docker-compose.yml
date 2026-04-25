@@ -6,12 +6,47 @@ services:
             - home:/home
         command:
             ["sh", "-lc", "chown -R ${UID}:${GID} /home"]
+
+    init-ssh:
+        image: alpine:3.20
+        user: "0:0"
+        depends_on:
+            init-perms:
+                condition: service_completed_successfully
+        environment:
+            UID: ${UID}
+            GID: ${GID}
+        volumes:
+            - home:/home/${DEV_USERNAME}
+            - ~/.ssh:/host-ssh:ro
+        command:
+            - sh
+            - -lc
+            - |
+                set -eu
+                SSH_DIR=/home/${DEV_USERNAME}/.ssh
+                mkdir -p "$$SSH_DIR"
+                [ -f /host-ssh/authorized_keys ] && cp /host-ssh/authorized_keys "$$SSH_DIR/authorized_keys"
+                [ -f /host-ssh/id_ed25519 ]      && cp /host-ssh/id_ed25519      "$$SSH_DIR/id_ed25519"
+                [ -f /host-ssh/id_ed25519.pub ]  && cp /host-ssh/id_ed25519.pub  "$$SSH_DIR/id_ed25519.pub"
+                [ -f "$$SSH_DIR/known_hosts" ] || { [ -f /host-ssh/known_hosts ] && cp /host-ssh/known_hosts "$$SSH_DIR/known_hosts"; }
+                chown -R "$$UID:$$GID" "$$SSH_DIR"
+                chmod 700 "$$SSH_DIR"
+                chmod 600 "$$SSH_DIR/authorized_keys" "$$SSH_DIR/id_ed25519" "$$SSH_DIR/known_hosts" 2>/dev/null || true
+                chmod 644 "$$SSH_DIR/id_ed25519.pub" 2>/dev/null || true
+
     dev:
         # Note: Running as root to allow sshd to bind port 22 and read host keys
         # User switching happens after SSH login
         container_name: bolt-dev
         image: bolt-dev
         privileged: true
+
+        depends_on:
+            init-perms:
+                condition: service_completed_successfully
+            init-ssh:
+                condition: service_completed_successfully
 
         environment:
             HTTP_PROXY: ${HTTP_PROXY}
@@ -39,9 +74,6 @@ services:
 
         volumes:
             - home:/home/${DEV_USERNAME}
-            - ~/.ssh/authorized_keys:/home/${DEV_USERNAME}/.ssh/authorized_keys:ro
-            - ~/.ssh/id_ed25519:/root/.ssh/id_ed25519:ro
-            - ~/.ssh/known_hosts:/root/.ssh/known_hosts
 
         tty: true
         stdin_open: true

@@ -44,18 +44,15 @@ else
     cp /etc/ssh/ssh_host_* "$HOST_KEY_DIR/"
 fi
 
-# Fix .ssh ownership (bind mount may create it as root)
-chown "$USER":"$USER" "$HOME_DIR/.ssh"
-chmod 700 "$HOME_DIR/.ssh"
-
-# Start reverse SSH tunnel if configured
+# Start reverse SSH tunnel if configured. Runs as the dev user so it picks up
+# the host's identity from $HOME_DIR/.ssh (seeded by the init-ssh service).
 if [ -n "$REVERSE_PROXY_HOST" ] && [ -n "$REVERSE_PROXY_PORT" ]; then
-    autossh -M 0 -f -N \
-        -o "StrictHostKeyChecking=no" \
-        -o "ServerAliveInterval=30" \
-        -o "ServerAliveCountMax=3" \
-        -R "${REVERSE_PROXY_PORT}:localhost:22" \
-        "${REVERSE_PROXY_USER:-root}@${REVERSE_PROXY_HOST}"
+    su - "$USER" -s /bin/bash -c "autossh -M 0 -f -N \
+        -o StrictHostKeyChecking=no \
+        -o ServerAliveInterval=30 \
+        -o ServerAliveCountMax=3 \
+        -R ${REVERSE_PROXY_PORT}:localhost:22 \
+        ${REVERSE_PROXY_USER:-root}@${REVERSE_PROXY_HOST}"
 fi
 
 # Start sshd in foreground
