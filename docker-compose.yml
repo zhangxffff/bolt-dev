@@ -26,10 +26,21 @@ services:
                 set -eu
                 SSH_DIR=/home/${DEV_USERNAME}/.ssh
                 mkdir -p "$$SSH_DIR"
-                [ -f /host-ssh/authorized_keys ] && cp /host-ssh/authorized_keys "$$SSH_DIR/authorized_keys"
-                [ -f /host-ssh/id_ed25519 ]      && cp /host-ssh/id_ed25519      "$$SSH_DIR/id_ed25519"
-                [ -f /host-ssh/id_ed25519.pub ]  && cp /host-ssh/id_ed25519.pub  "$$SSH_DIR/id_ed25519.pub"
-                [ -f "$$SSH_DIR/known_hosts" ] || { [ -f /host-ssh/known_hosts ] && cp /host-ssh/known_hosts "$$SSH_DIR/known_hosts"; }
+                # Remove stale entries first (may be directories left over from
+                # earlier bind-mount mistakes), then copy fresh from host.
+                for f in authorized_keys id_ed25519 id_ed25519.pub; do
+                    rm -rf "$$SSH_DIR/$$f"
+                    if [ -f "/host-ssh/$$f" ]; then
+                        cp "/host-ssh/$$f" "$$SSH_DIR/$$f"
+                    fi
+                done
+                # known_hosts: seed once, preserve container-local additions.
+                if [ ! -f "$$SSH_DIR/known_hosts" ]; then
+                    rm -rf "$$SSH_DIR/known_hosts"
+                    if [ -f /host-ssh/known_hosts ]; then
+                        cp /host-ssh/known_hosts "$$SSH_DIR/known_hosts"
+                    fi
+                fi
                 chown -R "$$UID:$$GID" "$$SSH_DIR"
                 chmod 700 "$$SSH_DIR"
                 chmod 600 "$$SSH_DIR/authorized_keys" "$$SSH_DIR/id_ed25519" "$$SSH_DIR/known_hosts" 2>/dev/null || true
