@@ -49,7 +49,8 @@ services:
     dev:
         # Note: Running as root to allow sshd to bind port 22 and read host keys
         # User switching happens after SSH login
-        container_name: bolt-dev
+        # No container_name: lets `-p NAME` run isolated instances (containers
+        # auto-named <project>-dev-1, each with its own <project>_home volume).
         image: bolt-dev
         privileged: true
 
@@ -63,8 +64,11 @@ services:
             HTTP_PROXY: ${HTTP_PROXY}
             HTTPS_PROXY: ${HTTPS_PROXY}
             NO_PROXY: ${NO_PROXY}
-            REVERSE_PROXY_HOST: ${REVERSE_PROXY_HOST}
-            REVERSE_PROXY_PORT: ${REVERSE_PROXY_PORT}
+            # workspace dir under the dev user's home; used by entrypoint.sh
+            DEV_WORKSPACE: ${DEV_WORKSPACE:-Workspace}
+            # autossh reverse tunnel is skipped in entrypoint.sh unless both are set
+            REVERSE_PROXY_HOST: ${REVERSE_PROXY_HOST:-}
+            REVERSE_PROXY_PORT: ${REVERSE_PROXY_PORT:-}
 
         build:
             context: .
@@ -79,15 +83,34 @@ services:
                 HTTPS_PROXY: ${HTTPS_PROXY}
                 NO_PROXY: ${NO_PROXY}
 
-        ports:
-            - "${HTTP_PORT}:${HTTP_PORT}"
-            - "${SSH_PORT}:22"
+        # No published ports: the box is reached via the Cloudflare tunnel
+        # (cloudflared -> dev:22 over the internal network) or the optional
+        # autossh reverse tunnel. Local fallback: `docker compose exec dev`.
 
         volumes:
             - home:/home/${DEV_USERNAME}
 
         tty: true
         stdin_open: true
+
+    # Cloudflare Tunnel sidecar — exposes the dev container (e.g. SSH on dev:22)
+    # via routing set in the Zero Trust dashboard. Single knob:
+    # CLOUDFLARE_TUNNEL_TOKEN in .env. No token -> cloudflared fails and exits
+    # ONCE: restart is token-derived, so it's empty (Docker default "no") when
+    # the token is blank, and "unless-stopped" when set. `dev` doesn't depend on
+    # it, so a failed cloudflared never affects the rest of the stack.
+    # Distroless image -> cloudflared's native entrypoint (no shell).
+    cloudflared:
+        image: cloudflare/cloudflared:latest
+        restart: ${CLOUDFLARE_TUNNEL_TOKEN:+unless-stopped}
+        depends_on:
+            - dev
+        environment:
+            TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+            HTTP_PROXY: ${HTTP_PROXY}
+            HTTPS_PROXY: ${HTTPS_PROXY}
+            NO_PROXY: ${NO_PROXY}
+        command: tunnel --no-autoupdate run
 
 volumes:
     home:

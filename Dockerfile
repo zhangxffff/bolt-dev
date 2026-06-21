@@ -74,8 +74,6 @@ ENV USER=${USERNAME}
 
 WORKDIR /home/${USERNAME}
 
-COPY config/fish.config /tmp/
-
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
