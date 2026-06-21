@@ -5,7 +5,7 @@ services:
         volumes:
             - home:/home
         command:
-            ["sh", "-lc", "chown -R ${UID}:${GID} /home"]
+            ["sh", "-lc", "chown ${UID}:${GID} /home"]
 
     init-ssh:
         image: alpine:3.20
