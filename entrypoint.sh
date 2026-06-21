@@ -18,6 +18,7 @@ WS="${DEV_WORKSPACE:-Workspace}"
         set -e
         mkdir -p ~/$WS
         if [ -d ~/$WS/dotfiles/.git ]; then
+            git -C ~/$WS/dotfiles checkout main || echo 'dotfiles: checkout main failed; using current branch'
             git -C ~/$WS/dotfiles pull --ff-only || echo 'dotfiles: pull skipped (local changes or diverged); using existing checkout'
         else
             git clone https://github.com/zhangxffff/dotfiles.git ~/$WS/dotfiles
